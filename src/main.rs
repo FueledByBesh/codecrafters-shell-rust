@@ -20,7 +20,7 @@ fn main() {
                 continue;
             }
             if SUPPORTED_COMMANDS.contains(&command_vec[1]){
-                println!("{}: is a shell builtin", command_vec[1]);
+                println!("{} is a shell builtin", command_vec[1]);
             }else{
                 println!("{}: command not found", command_vec[1]);
             }
