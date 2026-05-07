@@ -11,6 +11,12 @@ fn main() {
         if input_trim == "exit" {
             break;
         }
-        print!("{}: command not found\n", input_trim);
+        let command: Vec<&str> = input_trim.split_whitespace().into_iter().collect();
+        if command[0] == "echo"{
+            println!("{}", &command[1..].join(" "));
+        }else {
+            print!("{}: command not found\n", input_trim);
+        }
+
     }
 }
