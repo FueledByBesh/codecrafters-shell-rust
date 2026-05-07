@@ -7,7 +7,10 @@ fn main() {
         io::stdout().flush().unwrap();
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("Failed to read line");
-
-        print!("{}: command not found\n", input.trim());
+        let input_trim = input.trim();
+        if input_trim == "exit" {
+            break;
+        }
+        print!("{}: command not found\n", input_trim);
     }
 }
