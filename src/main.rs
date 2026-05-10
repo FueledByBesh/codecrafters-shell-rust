@@ -39,8 +39,8 @@ fn main() {
                 panic!("{}: unhandled builtin command!", command_vec[0])
             }
         } else {
-            if let Some(x) = find_executable_from_path(command_vec[0]){
-                execute( &x, &command_vec[1..])
+            if let Some(_) = find_executable_from_path(command_vec[0]){
+                execute( &command_vec[0], &command_vec[1..])
             }else {
                 print!("{}: command not found\n", command_vec[0]);
             }
