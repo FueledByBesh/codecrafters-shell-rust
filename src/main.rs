@@ -29,7 +29,7 @@ fn main() {
                 if let Some(x) = find_executable_from_path(&command_vec[1]) {
                     println!("{} is {}",command_vec[1], x);
                 } else {
-                    println!("{}: invalid command", command_vec[1])
+                    println!("{}: not found", command_vec[1])
                 }
             }
         } else if command_vec[0] == "echo"{
