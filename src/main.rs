@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 static BUILTIN_COMMANDS: LazyLock<HashSet<&'static str>> =
-    LazyLock::new(|| ["type", "echo", "pwd"].into_iter().collect());
+    LazyLock::new(|| ["exit","type", "echo", "pwd"].into_iter().collect());
 
 fn main() {
     loop {
