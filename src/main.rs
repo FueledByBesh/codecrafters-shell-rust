@@ -34,51 +34,71 @@ fn main() {
 }
 
 fn exec_builtin_commands(command_vec: &[&str], command: &str) {
-    if command_vec[0] == "type" {
-        if command_vec.len() < 2 {
-            println!("type: missing operand");
-            return;
-        } else if command_vec.len() > 2 {
-            println!("type: too many arguments");
-            return;
-        }
-        if BUILTIN_COMMANDS.contains(&command_vec[1]) {
-            println!("{} is a shell builtin", command_vec[1]);
-        } else {
-            if let Some(x) = find_executable_from_path(&command_vec[1]) {
-                println!("{} is {}", command_vec[1], x);
+    match command_vec[0] {
+        "type" => {
+            if command_vec.len() < 2 {
+                println!("type: missing operand");
+                return;
+            } else if command_vec.len() > 2 {
+                println!("type: too many arguments");
+                return;
+            }
+            if BUILTIN_COMMANDS.contains(&command_vec[1]) {
+                println!("{} is a shell builtin", command_vec[1]);
             } else {
-                println!("{}: not found", command_vec[1])
+                if let Some(x) = find_executable_from_path(&command_vec[1]) {
+                    println!("{} is {}", command_vec[1], x);
+                } else {
+                    println!("{}: not found", command_vec[1])
+                }
             }
         }
-    } else if command_vec[0] == "echo" {
-        println!("{}", &command[5..]);
-    } else if command_vec[0] == "pwd" {
-        let current_dir: String = env::current_dir()
-            .ok()
-            .and_then(|t| t.to_str().map(String::from))
-            .unwrap_or("Couldn't find current dir".to_string());
-        println!("{}", current_dir)
-    } else if command_vec[0] == "cd" {
-        match command_vec.len() {
+        "echo" => {
+            println!("{}", &command[5..]);
+        }
+        "pwd" => {
+            let current_dir: String = env::current_dir()
+                .ok()
+                .and_then(|t| t.to_str().map(String::from))
+                .unwrap_or("Couldn't find current dir".to_string());
+            println!("{}", current_dir)
+        }
+        "cd" => match command_vec.len() {
             1 => env::set_current_dir(env::home_dir().expect("Couldn't find home directory"))
                 .expect("Couldn't change current directory"),
             2 => {
-                if is_absolute_path(&command_vec[1]){
+                if is_absolute_path(&command_vec[1]) {
                     let path = Path::new(&command_vec[1]);
-                    if path.exists(){
-                        env::set_current_dir(path).expect("Couldn't change current directory")
-                    }else {
+                    if path.exists() {
+                        fs::metadata(path)
+                            .expect("Couldn't read metadata")
+                            .is_dir()
+                            .then(|| {
+                                env::set_current_dir(path)
+                                    .expect("Couldn't change current directory")
+                            })
+                            .unwrap_or_else(|| {
+                                println!("cd: {}: not a directory", path.to_str().unwrap())
+                            })
+                    } else {
                         println!("cd: {}: No such file or directory", path.to_str().unwrap())
                     }
-                }else {
-                    println!("cd: relative paths not supported for now, use absolute path instead!")
+                } else {
+                    // relative path handling
+                    // let paths: Vec<&str> = command_vec[1].split('/').collect();
+                    let cwd = env::current_dir().expect("Couldn't read current directory!");
+                    // for path in paths{
+                    //     if path.eq(".."){
+                    //         cwd.join()
+                    //     }
+                    // }
+                    env::set_current_dir(cwd.join(command_vec[1])).expect("Couldn't change working directory!")
+                    
                 }
             }
-            _ => println!("cd: too many arguments")
-        }
-    } else {
-        panic!("{}: unhandled builtin command!", command_vec[0])
+            _ => println!("cd: too many arguments"),
+        },
+        _ => panic!("{}: unhandled builtin command!", command_vec[0]),
     }
 }
 
@@ -115,6 +135,6 @@ fn execute(command: &str, args: &[&str]) {
 }
 
 // ==================== helper functions ================
-fn is_absolute_path(path: &str)->bool{
+fn is_absolute_path(path: &str) -> bool {
     path.starts_with("/")
 }
