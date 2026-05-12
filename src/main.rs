@@ -67,14 +67,21 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
             1 => env::set_current_dir(env::home_dir().expect("Couldn't find home directory"))
                 .expect("Couldn't change current directory"),
             2 => {
-                if is_absolute_path(&command_vec[1]) {
-                    let path = Path::new(&command_vec[1]);
+                let path = command_vec[1]
+                    .starts_with("~/")
+                    .then(|| {
+                        let home_dir = env::home_dir()
+                            .expect("Couldn't get home directory!");
+                        home_dir.join(&command_vec[1][2..])
+                    })
+                    .unwrap_or(Path::new(command_vec[1]).to_path_buf());
+                if is_absolute_path_buf(&path) {
                     if path.exists() {
-                        fs::metadata(path)
+                        fs::metadata(&path)
                             .expect("Couldn't read metadata")
                             .is_dir()
                             .then(|| {
-                                env::set_current_dir(path)
+                                env::set_current_dir(&path)
                                     .expect("Couldn't change current directory")
                             })
                             .unwrap_or_else(|| {
@@ -84,16 +91,20 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
                         println!("cd: {}: No such file or directory", path.to_str().unwrap())
                     }
                 } else {
-                    // relative path handling
-                    // let paths: Vec<&str> = command_vec[1].split('/').collect();
                     let cwd = env::current_dir().expect("Couldn't read current directory!");
-                    // for path in paths{
-                    //     if path.eq(".."){
-                    //         cwd.join()
-                    //     }
-                    // }
-                    env::set_current_dir(cwd.join(command_vec[1])).expect("Couldn't change working directory!")
-                    
+                    env::set_current_dir(cwd.join(command_vec[1])).unwrap_or_else(|e| {
+                        match e.kind().to_string().as_str() {
+                            "entity not found" => {
+                                println!("cd: {}: No such file or directory", command_vec[1])
+                            }
+                            "not a directory" => {
+                                println!("cd: {}: not a directory", command_vec[1])
+                            }
+                            _ => {
+                                panic!("Couldn't change working directory, e:{e}")
+                            }
+                        }
+                    })
                 }
             }
             _ => println!("cd: too many arguments"),
@@ -135,6 +146,9 @@ fn execute(command: &str, args: &[&str]) {
 }
 
 // ==================== helper functions ================
-fn is_absolute_path(path: &str) -> bool {
-    path.starts_with("/")
+// fn is_absolute_path(path: &str) -> bool {
+//     path.starts_with("/")
+// }
+fn is_absolute_path_buf(path: &PathBuf)->bool{
+    path.is_absolute()
 }
