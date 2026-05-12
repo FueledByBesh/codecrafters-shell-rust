@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 static BUILTIN_COMMANDS: LazyLock<HashSet<&'static str>> =
-    LazyLock::new(|| ["exit","type", "echo", "pwd"].into_iter().collect());
+    LazyLock::new(|| ["exit", "type", "echo", "pwd", "cd"].into_iter().collect());
 
 fn main() {
     loop {
@@ -54,10 +54,29 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
     } else if command_vec[0] == "echo" {
         println!("{}", &command[5..]);
     } else if command_vec[0] == "pwd" {
-        let current_dir: String = env::current_dir().ok()
+        let current_dir: String = env::current_dir()
+            .ok()
             .and_then(|t| t.to_str().map(String::from))
             .unwrap_or("Couldn't find current dir".to_string());
         println!("{}", current_dir)
+    } else if command_vec[0] == "cd" {
+        match command_vec.len() {
+            1 => env::set_current_dir(env::home_dir().expect("Couldn't find home directory"))
+                .expect("Couldn't change current directory"),
+            2 => {
+                if is_absolute_path(&command_vec[1]){
+                    let path = Path::new(&command_vec[1]);
+                    if path.exists(){
+                        env::set_current_dir(path).expect("Couldn't change current directory")
+                    }else {
+                        println!("cd: {}: No such file or directory", path.to_str().unwrap())
+                    }
+                }else {
+                    println!("cd: relative paths not supported for now, use absolute path instead!")
+                }
+            }
+            _ => println!("cd: too many arguments")
+        }
     } else {
         panic!("{}: unhandled builtin command!", command_vec[0])
     }
@@ -93,4 +112,9 @@ fn execute(command: &str, args: &[&str]) {
     use std::process::Command;
     let output = Command::new(command).args(args).output().unwrap();
     print!("{}", String::from_utf8_lossy(&output.stdout))
+}
+
+// ==================== helper functions ================
+fn is_absolute_path(path: &str)->bool{
+    path.starts_with("/")
 }
