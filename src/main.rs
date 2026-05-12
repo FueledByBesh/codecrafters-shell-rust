@@ -68,11 +68,19 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
                 .expect("Couldn't change current directory"),
             2 => {
                 let path = command_vec[1]
-                    .starts_with("~/")
+                    .starts_with("~")
                     .then(|| {
                         let home_dir = env::home_dir()
                             .expect("Couldn't get home directory!");
-                        home_dir.join(&command_vec[1][2..])
+                        if command_vec[1].len()==1{
+                            home_dir
+                        }else {
+                            if command_vec[1].starts_with("~/") {
+                                home_dir.join(&command_vec[1][2..])
+                            }else{
+                                Path::new(command_vec[1]).to_path_buf()
+                            }
+                        }
                     })
                     .unwrap_or(Path::new(command_vec[1]).to_path_buf());
                 if is_absolute_path_buf(&path) {
