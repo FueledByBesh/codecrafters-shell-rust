@@ -1,3 +1,5 @@
+mod tests;
+
 #[allow(unused_imports)]
 use std::collections::HashSet;
 use std::env;
@@ -17,14 +19,24 @@ fn main() {
             .read_line(&mut input)
             .expect("Failed to read line");
         let command = input.trim();
-        let command_vec: Vec<&str> = command.split_whitespace().collect();
+        if command.is_empty() {
+            continue;
+        }
+        let command_vec: Vec<String>;
+        match tokenize(command) {
+            Ok(v) => command_vec = v,
+            Err(e) => {
+                print!("{}",e);
+                continue
+            }
+        }
         if command_vec[0] == "exit" {
             break;
         }
-        if BUILTIN_COMMANDS.contains(&command_vec[0]) {
-            exec_builtin_commands(&command_vec, command);
+        if BUILTIN_COMMANDS.contains(command_vec[0].as_str()) {
+            exec_builtin_commands(&command_vec);
         } else {
-            if let Some(_) = find_executable_from_path(command_vec[0]) {
+            if let Some(_) = find_executable_from_path(command_vec[0].as_str()) {
                 execute(&command_vec[0], &command_vec[1..])
             } else {
                 print!("{}: command not found\n", command_vec[0]);
@@ -33,8 +45,8 @@ fn main() {
     }
 }
 
-fn exec_builtin_commands(command_vec: &[&str], command: &str) {
-    match command_vec[0] {
+fn exec_builtin_commands(command_vec: &[String]) {
+    match command_vec[0].as_str() {
         "type" => {
             if command_vec.len() < 2 {
                 println!("type: missing operand");
@@ -43,10 +55,10 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
                 println!("type: too many arguments");
                 return;
             }
-            if BUILTIN_COMMANDS.contains(&command_vec[1]) {
+            if BUILTIN_COMMANDS.contains(command_vec[1].as_str()) {
                 println!("{} is a shell builtin", command_vec[1]);
             } else {
-                if let Some(x) = find_executable_from_path(&command_vec[1]) {
+                if let Some(x) = find_executable_from_path(command_vec[1].as_str()) {
                     println!("{} is {}", command_vec[1], x);
                 } else {
                     println!("{}: not found", command_vec[1])
@@ -54,7 +66,7 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
             }
         }
         "echo" => {
-            println!("{}", &command[5..]);
+            println!("{}", command_vec[1..].join(" "));
         }
         "pwd" => {
             let current_dir: String = env::current_dir()
@@ -70,19 +82,18 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
                 let path = command_vec[1]
                     .starts_with("~")
                     .then(|| {
-                        let home_dir = env::home_dir()
-                            .expect("Couldn't get home directory!");
-                        if command_vec[1].len()==1{
+                        let home_dir = env::home_dir().expect("Couldn't get home directory!");
+                        if command_vec[1].len() == 1 {
                             home_dir
-                        }else {
+                        } else {
                             if command_vec[1].starts_with("~/") {
                                 home_dir.join(&command_vec[1][2..])
-                            }else{
-                                Path::new(command_vec[1]).to_path_buf()
+                            } else {
+                                Path::new(&command_vec[1]).to_path_buf()
                             }
                         }
                     })
-                    .unwrap_or(Path::new(command_vec[1]).to_path_buf());
+                    .unwrap_or(Path::new(&command_vec[1]).to_path_buf());
                 if is_absolute_path_buf(&path) {
                     if path.exists() {
                         fs::metadata(&path)
@@ -100,7 +111,7 @@ fn exec_builtin_commands(command_vec: &[&str], command: &str) {
                     }
                 } else {
                     let cwd = env::current_dir().expect("Couldn't read current directory!");
-                    env::set_current_dir(cwd.join(command_vec[1])).unwrap_or_else(|e| {
+                    env::set_current_dir(cwd.join(&command_vec[1])).unwrap_or_else(|e| {
                         match e.kind().to_string().as_str() {
                             "entity not found" => {
                                 println!("cd: {}: No such file or directory", command_vec[1])
@@ -147,7 +158,7 @@ fn is_executable(path: &PathBuf) -> bool {
 /**
 trusts that the file is executable
 */
-fn execute(command: &str, args: &[&str]) {
+fn execute(command: &str, args: &[String]) {
     use std::process::Command;
     let output = Command::new(command).args(args).output().unwrap();
     print!("{}", String::from_utf8_lossy(&output.stdout))
@@ -157,6 +168,46 @@ fn execute(command: &str, args: &[&str]) {
 // fn is_absolute_path(path: &str) -> bool {
 //     path.starts_with("/")
 // }
-fn is_absolute_path_buf(path: &PathBuf)->bool{
+fn is_absolute_path_buf(path: &PathBuf) -> bool {
     path.is_absolute()
+}
+
+fn tokenize(command: &str) -> Result<Vec<String>,&'static str> {
+    let mut tokens: Vec<String> = Vec::new();
+    let mut single_quote_opened: bool = false;
+    let mut buffer: String = String::with_capacity(command.len());
+    // let mut prev_char: Option<char> = None; //here whitespace doesn't count as character
+    for c in command.chars() {
+
+        if c == '\''{
+            single_quote_opened = !single_quote_opened;
+            continue
+        }
+        if single_quote_opened{
+            buffer.push(c);
+        }else{
+            if c == ' '{
+                if !buffer.is_empty(){
+                    tokens.push(buffer.as_str().to_owned());
+                    buffer.clear();
+                }
+            }else{
+                buffer.push(c);
+            }
+        }
+    }
+    if single_quote_opened {
+        return Err("invalid syntax! close single quotes!\n")
+    }
+    if !buffer.is_empty(){tokens.push(buffer.as_str().to_owned())}
+
+    // print_tokenized(&tokens);
+
+    Ok(tokens)
+}
+
+fn print_tokenized(vec: &Vec<String>){
+    vec.iter().for_each(|x| {
+        println!("{x}")
+    })
 }
