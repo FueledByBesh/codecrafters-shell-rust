@@ -26,8 +26,8 @@ fn main() {
         match tokenize(command) {
             Ok(v) => command_vec = v,
             Err(e) => {
-                print!("{}",e);
-                continue
+                print!("{}", e);
+                continue;
             }
         }
         if command_vec[0] == "exit" {
@@ -172,69 +172,76 @@ fn is_absolute_path_buf(path: &PathBuf) -> bool {
     path.is_absolute()
 }
 
-fn tokenize(command: &str) -> Result<Vec<String>,&'static str> {
+fn tokenize(command: &str) -> Result<Vec<String>, &'static str> {
     let mut tokens: Vec<String> = Vec::new();
     let mut single_quote_opened: bool = false;
     let mut double_quote_opened: bool = false;
+    let mut backslash_opened: bool = false;
     let mut buffer: String = String::with_capacity(command.len());
     // let mut prev_char: Option<char> = None; //here whitespace doesn't count as character
     for c in command.chars() {
-
-        // match c {
-        //     '\'' => {
-        //
-        //     }
-        //
-        //     _ =>{}
-        //
-        // }
-
-        if c == '"'{
-            if single_quote_opened{
-                buffer.push(c);
-            }else {
-                double_quote_opened = !double_quote_opened;
-            }
-            continue
-        }
-
-        if c == '\''{
-            if double_quote_opened{
-                buffer.push(c);
-            }else {
-                single_quote_opened = !single_quote_opened;
-            }
-            continue
-        }
-
-        if single_quote_opened || double_quote_opened{
-            buffer.push(c);
-        }else{
-            if c == ' '{
-                if !buffer.is_empty(){
-                    tokens.push(buffer.as_str().to_owned());
-                    buffer.clear();
+        match c {
+            '"' => {
+                if single_quote_opened {
+                    buffer.push(c);
+                } else {
+                    double_quote_opened = !double_quote_opened;
                 }
-            }else{
-                buffer.push(c);
+            }
+            '\'' => {
+                if double_quote_opened {
+                    buffer.push(c);
+                } else {
+                    single_quote_opened = !single_quote_opened;
+                }
+            }
+            '\\' => {
+                if single_quote_opened || double_quote_opened {
+                    buffer.push(c);
+                } else {
+                    if backslash_opened {
+                        buffer.push(c)
+                    }
+                    backslash_opened = !backslash_opened;
+                }
+            }
+            _ => {
+                if single_quote_opened || double_quote_opened {
+                    buffer.push(c);
+                } else {
+                    if backslash_opened {
+                        buffer.push(c);
+                        backslash_opened = false;
+                        continue
+                    }
+                    if c == ' ' {
+                        if !buffer.is_empty() {
+                            tokens.push(buffer.as_str().to_owned());
+                            buffer.clear();
+                        }
+                    } else {
+                        buffer.push(c);
+                    }
+                }
             }
         }
     }
+
     if single_quote_opened {
-        return Err("invalid syntax! close single quotes!\n")
+        return Err("invalid syntax! close single quotes!\n");
     }
-    if double_quote_opened{
-        return Err("invalid syntax! close double quotes!\n")
+    if double_quote_opened {
+        return Err("invalid syntax! close double quotes!\n");
     }
-    if !buffer.is_empty(){tokens.push(buffer.as_str().to_owned())}
+    if !buffer.is_empty() {
+        tokens.push(buffer.as_str().to_owned())
+    }
 
     // print_tokenized(&tokens);
 
     Ok(tokens)
 }
 
-fn print_tokenized(vec: &Vec<String>){
-    vec.iter().for_each(|x| {
-        println!("{x}")
-    })
+fn print_tokenized(vec: &Vec<String>) {
+    vec.iter().for_each(|x| println!("{x}"))
 }
