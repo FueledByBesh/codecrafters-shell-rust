@@ -180,6 +180,11 @@ fn tokenize(command: &str) -> Result<Vec<String>, &'static str> {
     let mut buffer: String = String::with_capacity(command.len());
     // let mut prev_char: Option<char> = None; //here whitespace doesn't count as character
     for c in command.chars() {
+        if backslash_opened{
+            buffer.push(c);
+            backslash_opened = false;
+            continue
+        }
         match c {
             '"' => {
                 if single_quote_opened {
@@ -199,9 +204,6 @@ fn tokenize(command: &str) -> Result<Vec<String>, &'static str> {
                 if single_quote_opened || double_quote_opened {
                     buffer.push(c);
                 } else {
-                    if backslash_opened {
-                        buffer.push(c)
-                    }
                     backslash_opened = !backslash_opened;
                 }
             }
@@ -209,11 +211,6 @@ fn tokenize(command: &str) -> Result<Vec<String>, &'static str> {
                 if single_quote_opened || double_quote_opened {
                     buffer.push(c);
                 } else {
-                    if backslash_opened {
-                        buffer.push(c);
-                        backslash_opened = false;
-                        continue
-                    }
                     if c == ' ' {
                         if !buffer.is_empty() {
                             tokens.push(buffer.as_str().to_owned());
