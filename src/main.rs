@@ -175,15 +175,39 @@ fn is_absolute_path_buf(path: &PathBuf) -> bool {
 fn tokenize(command: &str) -> Result<Vec<String>,&'static str> {
     let mut tokens: Vec<String> = Vec::new();
     let mut single_quote_opened: bool = false;
+    let mut double_quote_opened: bool = false;
     let mut buffer: String = String::with_capacity(command.len());
     // let mut prev_char: Option<char> = None; //here whitespace doesn't count as character
     for c in command.chars() {
 
-        if c == '\''{
-            single_quote_opened = !single_quote_opened;
+        // match c {
+        //     '\'' => {
+        //
+        //     }
+        //
+        //     _ =>{}
+        //
+        // }
+
+        if c == '"'{
+            if single_quote_opened{
+                buffer.push(c);
+            }else {
+                double_quote_opened = !double_quote_opened;
+            }
             continue
         }
-        if single_quote_opened{
+
+        if c == '\''{
+            if double_quote_opened{
+                buffer.push(c);
+            }else {
+                single_quote_opened = !single_quote_opened;
+            }
+            continue
+        }
+
+        if single_quote_opened || double_quote_opened{
             buffer.push(c);
         }else{
             if c == ' '{
@@ -198,6 +222,9 @@ fn tokenize(command: &str) -> Result<Vec<String>,&'static str> {
     }
     if single_quote_opened {
         return Err("invalid syntax! close single quotes!\n")
+    }
+    if double_quote_opened{
+        return Err("invalid syntax! close double quotes!\n")
     }
     if !buffer.is_empty(){tokens.push(buffer.as_str().to_owned())}
 
